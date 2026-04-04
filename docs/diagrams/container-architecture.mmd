@@ -1,0 +1,9 @@
+﻿flowchart LR
+    UI[React UI] --> INV[Inventory API]
+    UI --> ORD[Orders API]
+    UI --> WH[Warehouse API]
+    ORD --> LMB[Notification Lambda]
+    LMB --> SQS[SQS]
+    LMB --> SNS[SNS]
+    INV --> PG[(PostgreSQL)]
+    WH --> DDB[(DynamoDB)]

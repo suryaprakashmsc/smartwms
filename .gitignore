@@ -1,0 +1,15 @@
+bin/
+obj/
+.vs/
+.vscode/
+node_modules/
+dist/
+coverage/
+.idea/
+*.user
+*.suo
+*.db
+*.sqlite
+.env
+.env.*
+Documents/enterprise-project-plan.html
