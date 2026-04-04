@@ -1,0 +1,59 @@
+﻿apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: inventory-api
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: inventory-api
+  template:
+    metadata:
+      labels:
+        app: inventory-api
+    spec:
+      containers:
+        - name: inventory-api
+          image: smartwms/inventory-api:dev
+          ports:
+            - containerPort: 8080
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: orders-api
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: orders-api
+  template:
+    metadata:
+      labels:
+        app: orders-api
+    spec:
+      containers:
+        - name: orders-api
+          image: smartwms/orders-api:dev
+          ports:
+            - containerPort: 8081
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: warehouse-api
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: warehouse-api
+  template:
+    metadata:
+      labels:
+        app: warehouse-api
+    spec:
+      containers:
+        - name: warehouse-api
+          image: smartwms/warehouse-api:dev
+          ports:
+            - containerPort: 8082

@@ -1,0 +1,12 @@
+﻿image:
+  repository: smartwms/inventory-api
+  tag: dev
+
+service:
+  port: 80
+  targetPort: 8080
+
+ingress:
+  enabled: true
+  host: smartwms.local
+  path: /

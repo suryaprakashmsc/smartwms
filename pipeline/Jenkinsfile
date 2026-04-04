@@ -1,0 +1,35 @@
+﻿pipeline {
+  agent any
+
+  stages {
+    stage('Checkout') {
+      steps {
+        checkout scm
+      }
+    }
+
+    stage('Backend') {
+      steps {
+        echo 'Restore, build, and test .NET services here.'
+      }
+    }
+
+    stage('Frontend') {
+      steps {
+        echo 'Install, lint, and build the React app here.'
+      }
+    }
+
+    stage('Containerize') {
+      steps {
+        echo 'Build and tag Docker images for services and frontend.'
+      }
+    }
+
+    stage('Deploy') {
+      steps {
+        echo 'Deploy to k3d, ECS, or another target environment.'
+      }
+    }
+  }
+}
