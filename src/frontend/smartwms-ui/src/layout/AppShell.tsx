@@ -1,4 +1,5 @@
-﻿import { NavLink, Outlet } from "react-router-dom";
+import { NavLink, Outlet } from "react-router-dom";
+import { useAuth } from "../hooks/useAuth";
 
 const links = [
   { to: "/", label: "Dashboard" },
@@ -8,6 +9,8 @@ const links = [
 ];
 
 export default function AppShell() {
+  const auth = useAuth();
+
   return (
     <div className="app-shell">
       <aside className="sidebar">
@@ -25,6 +28,17 @@ export default function AppShell() {
             </NavLink>
           ))}
         </nav>
+        <div className="sidebar-footer">
+          {auth.userEmail ? <p className="subtle-text">{auth.userEmail}</p> : null}
+          <button
+            type="button"
+            className="secondary-button sidebar-action"
+            onClick={() => void auth.logout()}
+            disabled={auth.isLoading}
+          >
+            Sign out
+          </button>
+        </div>
       </aside>
       <main className="main-content">
         <Outlet />

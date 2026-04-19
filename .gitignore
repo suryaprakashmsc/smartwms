@@ -13,4 +13,6 @@ coverage/
 .env
 .env.*
 Documents/enterprise-project-plan.html
-Documents/Instruction-codex
+Documents/Instruction-codex 
+/.dotnet
+/docs
