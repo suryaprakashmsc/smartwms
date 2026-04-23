@@ -1,4 +1,4 @@
-import { missingCognitoConfigKeys } from "../auth/cognitoAuth";
+import { missingCognitoConfigKeys } from "../auth/cognitoConfig";
 import { useAuth } from "../hooks/useAuth";
 
 export default function LoginPage() {
@@ -15,7 +15,6 @@ export default function LoginPage() {
         <p className="eyebrow">Security</p>
         <h2>Sign in to SmartWMS</h2>
         <p>Use the AWS Cognito Hosted UI to sign in and receive JWT tokens for API access.</p>
-        {auth.error ? <p className="subtle-text error-text">{auth.error.message}</p> : null}
         {hasConfigError ? (
           <p className="subtle-text error-text">
             Missing config: {missingCognitoConfigKeys.join(", ")}

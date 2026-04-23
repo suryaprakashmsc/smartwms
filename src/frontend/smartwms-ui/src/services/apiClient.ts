@@ -1,4 +1,4 @@
-import { getAccessToken } from "./authTokenStore";
+import { fetchAuthSession } from 'aws-amplify/auth'
 
 export type QueryValue = string | number | boolean | null | undefined;
 export type QueryParams = Record<string, QueryValue>;
@@ -62,15 +62,29 @@ export async function fetchJson<T>(path: string, init: RequestInit = {}): Promis
   const headers = new Headers(init.headers);
   headers.set("Accept", "application/json");
 
-  const accessToken = getAccessToken();
-  if (accessToken && !headers.has("Authorization")) {
-    headers.set("Authorization", `Bearer ${accessToken}`);
+  try {
+    const session = await fetchAuthSession()
+    const accessToken = session.tokens?.accessToken?.toString()
+    console.log('API Request:', { path, hasToken: !!accessToken, tokenLength: accessToken?.length })
+    if (accessToken && !headers.has("Authorization")) {
+      headers.set("Authorization", `Bearer ${accessToken}`)
+      console.log('Authorization header set with accessToken')
+    } else if (!accessToken) {
+      console.warn('No access token found in session for API request')
+    }
+  } catch (err) {
+    // not logged in — request proceeds without token
+    // protected endpoints will return 401
+    console.error('Error fetching auth session:', err)
   }
 
+  console.log('Sending request to:', `${apiBaseUrl}${path}`)
   const response = await fetch(`${apiBaseUrl}${path}`, {
     ...init,
     headers
   });
+
+  console.log('Response received:', { status: response.status, statusText: response.statusText })
 
   if (!response.ok) {
     const fallbackMessage = `Request failed with status ${response.status}`;

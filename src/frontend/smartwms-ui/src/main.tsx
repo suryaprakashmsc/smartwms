@@ -1,12 +1,30 @@
-import { InMemoryWebStorage, WebStorageStateStore } from "oidc-client-ts";
+import { Amplify } from 'aws-amplify'
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import React from "react";
 import ReactDOM from "react-dom/client";
-import { AuthProvider } from "react-oidc-context";
 import { BrowserRouter } from "react-router-dom";
 import App from "./App.tsx";
-import { cognitoAuthConfig } from "./auth/cognitoAuth";
+import { AuthProvider } from "./context/AuthContext";
 import "./styles/app.css";
+
+// Configure Amplify with Cognito
+Amplify.configure({
+  Auth: {
+    Cognito: {
+      userPoolId: import.meta.env.VITE_COGNITO_USER_POOL_ID,
+      userPoolClientId: import.meta.env.VITE_COGNITO_CLIENT_ID,
+      loginWith: {
+        oauth: {
+          domain: import.meta.env.VITE_COGNITO_DOMAIN,
+          scopes: ['openid', 'email', 'profile'],
+          redirectSignIn: ['http://localhost:5173/callback'],
+          redirectSignOut: ['http://localhost:5173/login'],
+          responseType: 'code'
+        }
+      }
+    }
+  }
+})
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -18,22 +36,9 @@ const queryClient = new QueryClient({
   }
 });
 
-const inMemoryUserStore = new WebStorageStateStore({ store: new InMemoryWebStorage() });
-const sessionStateStore = new WebStorageStateStore({ store: window.sessionStorage });
-
-function handleSigninCallback() {
-  const cleanPath = `${window.location.origin}${window.location.pathname}`;
-  window.history.replaceState({}, document.title, cleanPath);
-}
-
 ReactDOM.createRoot(document.getElementById("root")!).render(
   <React.StrictMode>
-    <AuthProvider
-      {...cognitoAuthConfig}
-      userStore={inMemoryUserStore}
-      stateStore={sessionStateStore}
-      onSigninCallback={handleSigninCallback}
-    >
+    <AuthProvider>
       <QueryClientProvider client={queryClient}>
         <BrowserRouter>
           <App />
