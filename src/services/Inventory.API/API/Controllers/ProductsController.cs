@@ -2,12 +2,14 @@ using Inventory.Application.Products.Commands;
 using Inventory.Application.Products.Common;
 using Inventory.Application.Products.Queries;
 using MediatR;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
 namespace Inventory.API.Controllers;
 
 [ApiController]
 [Route("api/[controller]")]
+[Authorize]
 public sealed class ProductsController : ControllerBase
 {
     private readonly IMediator _mediator;
