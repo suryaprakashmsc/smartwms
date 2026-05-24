@@ -7,19 +7,29 @@ import App from "./App.tsx";
 import { AuthProvider } from "./context/AuthContext";
 import "./styles/app.css";
 
+const defaultOrigin = typeof window !== "undefined" ? window.location.origin : "http://localhost:5173";
+const redirectSignIn =
+  import.meta.env.VITE_REDIRECT_SIGN_IN ??
+  import.meta.env.VITE_COGNITO_REDIRECT_URI ??
+  `${defaultOrigin}/callback`;
+const redirectSignOut =
+  import.meta.env.VITE_REDIRECT_SIGN_OUT ??
+  import.meta.env.VITE_COGNITO_POST_LOGOUT_REDIRECT_URI ??
+  `${defaultOrigin}/login`;
+
 // Configure Amplify with Cognito
 Amplify.configure({
   Auth: {
     Cognito: {
-      userPoolId: import.meta.env.VITE_COGNITO_USER_POOL_ID,
+      userPoolId:       import.meta.env.VITE_COGNITO_USER_POOL_ID,
       userPoolClientId: import.meta.env.VITE_COGNITO_CLIENT_ID,
       loginWith: {
         oauth: {
-          domain: import.meta.env.VITE_COGNITO_DOMAIN,
-          scopes: ['openid', 'email', 'profile'],
-          redirectSignIn: ['http://localhost:5173/callback'],
-          redirectSignOut: ['http://localhost:5173/login'],
-          responseType: 'code'
+          domain:          import.meta.env.VITE_COGNITO_DOMAIN,
+          scopes:          ['openid', 'email', 'profile'],
+          redirectSignIn:  [redirectSignIn],
+          redirectSignOut: [redirectSignOut],
+          responseType:    'code'
         }
       }
     }

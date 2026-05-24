@@ -1,0 +1,37 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: inventory
+      POSTGRES_USER: smartwms
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-change-me}
+    ports:
+      - "${POSTGRES_HOST_PORT:-5432}:5432"
+    volumes:
+      - inventory-postgres-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U smartwms -d inventory"]
+      interval: 5s
+      timeout: 5s
+      retries: 12
+
+  inventory-api:
+    build:
+      context: .
+      dockerfile: API/Dockerfile
+    environment:
+      ASPNETCORE_ENVIRONMENT: Development
+      ASPNETCORE_URLS: http://+:8080
+      ConnectionStrings__DefaultConnection: Host=postgres;Port=5432;Database=inventory;Username=smartwms;Password=${POSTGRES_PASSWORD:-change-me}
+      Cognito__Region: us-east-1
+      Cognito__UserPoolId: us-east-1_GZM8p0kaW
+      Cognito__ClientId: 2uasdjo331fn7qsbhienjpsd39
+      Cognito__Authority: https://cognito-idp.us-east-1.amazonaws.com/us-east-1_GZM8p0kaW
+    ports:
+      - "8082:8080"
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+volumes:
+  inventory-postgres-data:
