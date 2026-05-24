@@ -12,7 +12,9 @@ coverage/
 *.sqlite
 .env
 .env.*
+pipeline/.env
 Documents/enterprise-project-plan.html
 Documents/Instruction-codex 
 /.dotnet
 /docs
+smartwms-ui.bat
