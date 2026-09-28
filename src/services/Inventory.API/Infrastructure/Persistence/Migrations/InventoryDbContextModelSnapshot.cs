@@ -17,7 +17,7 @@ namespace Inventory.Infrastructure.Persistence.Migrations
         {
 #pragma warning disable 612, 618
             modelBuilder
-                .HasAnnotation("ProductVersion", "8.0.0")
+                .HasAnnotation("ProductVersion", "8.0.31")
                 .HasAnnotation("Relational:MaxIdentifierLength", 63);
 
             NpgsqlModelBuilderExtensions.UseIdentityByDefaultColumns(modelBuilder);
@@ -85,6 +85,12 @@ namespace Inventory.Infrastructure.Persistence.Migrations
                         .HasColumnType("character varying(100)")
                         .HasColumnName("updated_by");
 
+                    b.Property<uint>("Version")
+                        .IsConcurrencyToken()
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("xid")
+                        .HasColumnName("xmin");
+
                     b.Property<string>("WarehouseLocation")
                         .HasMaxLength(100)
                         .HasColumnType("character varying(100)")
@@ -113,6 +119,12 @@ namespace Inventory.Infrastructure.Persistence.Migrations
                                 .HasColumnType("character varying(3)")
                                 .HasColumnName("currency");
 
+                            b1.Property<uint>("Version")
+                                .IsConcurrencyToken()
+                                .ValueGeneratedOnAddOrUpdate()
+                                .HasColumnType("xid")
+                                .HasColumnName("xmin");
+
                             b1.HasKey("ProductId");
 
                             b1.ToTable("products");
@@ -131,6 +143,12 @@ namespace Inventory.Infrastructure.Persistence.Migrations
                                 .HasMaxLength(20)
                                 .HasColumnType("character varying(20)")
                                 .HasColumnName("sku");
+
+                            b1.Property<uint>("Version")
+                                .IsConcurrencyToken()
+                                .ValueGeneratedOnAddOrUpdate()
+                                .HasColumnType("xid")
+                                .HasColumnName("xmin");
 
                             b1.HasKey("ProductId");
 
@@ -159,6 +177,12 @@ namespace Inventory.Infrastructure.Persistence.Migrations
                             b1.Property<int>("ReorderLevel")
                                 .HasColumnType("integer")
                                 .HasColumnName("reorder_level");
+
+                            b1.Property<uint>("Version")
+                                .IsConcurrencyToken()
+                                .ValueGeneratedOnAddOrUpdate()
+                                .HasColumnType("xid")
+                                .HasColumnName("xmin");
 
                             b1.HasKey("ProductId");
 

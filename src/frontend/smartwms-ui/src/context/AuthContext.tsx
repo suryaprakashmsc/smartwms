@@ -1,125 +1,69 @@
-import { createContext, useContext, useEffect, useState } from 'react'
+import { useEffect, useState, type ReactNode } from 'react'
+import { AuthContext, type AuthUser } from './authContextValue'
 import { fetchAuthSession, signInWithRedirect, signOut, getCurrentUser } from 'aws-amplify/auth'
 import { Hub } from 'aws-amplify/utils'
 
-interface AuthUser { 
-  email: string
-  name: string 
-}
-
-interface AuthCtx {
-  user: AuthUser | null
-  token: string | null
-  isLoading: boolean
-  error: string | null
-  login: () => void
-  logout: () => void
-  isAuthenticated: boolean
-}
-
-const AuthContext = createContext<AuthCtx>({} as AuthCtx)
-
-export function AuthProvider({ children }: { children: React.ReactNode }) {
+export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<AuthUser | null>(null)
   const [token, setToken] = useState<string | null>(null)
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
 
   useEffect(() => {
-    loadSession()
-
-    // Listen for auth events (like signIn completion)
+    let active = true
+    let generation = 0
+    async function loadSession() {
+      const request = ++generation
+      try {
+        const session = await fetchAuthSession()
+        const accessToken = session.tokens?.accessToken?.toString()
+        const currentUser = accessToken ? await getCurrentUser() : null
+        if (!active || request !== generation) return
+        setError(null)
+        setToken(accessToken ?? null)
+        setUser(currentUser ? {
+          email: currentUser.signInDetails?.loginId ?? currentUser.username,
+          name: currentUser.username,
+        } : null)
+      } catch (err) {
+        if (!active || request !== generation) return
+        setUser(null)
+        setToken(null)
+        setError(err instanceof Error ? err.message : 'Unable to load your session')
+      } finally {
+        if (active && request === generation) setIsLoading(false)
+      }
+    }
+    void loadSession()
     const unsubscribe = Hub.listen('auth', ({ payload }) => {
-      console.log('Auth event:', payload.event)
       if (payload.event === 'signedIn' || payload.event === 'signInWithRedirect') {
-        console.log('Sign-in event detected, reloading session')
-        loadSession()
+        void loadSession()
       } else if (payload.event === 'signedOut') {
+        generation++
         setUser(null)
         setToken(null)
         setError(null)
+        setIsLoading(false)
       }
     })
-
-    return () => unsubscribe()
+    return () => { active = false; generation++; unsubscribe() }
   }, [])
 
-  async function loadSession() {
-    try {
-      setError(null)
-      console.log('Loading auth session...')
-      const session = await fetchAuthSession()
-      console.log('Session retrieved:', { hasIdToken: !!session.tokens?.idToken, hasAccessToken: !!session.tokens?.accessToken })
-      
-      // Use accessToken for API authorization (not idToken)
-      // accessToken is designed for API calls, idToken is for identity info
-      const accessToken = session.tokens?.accessToken?.toString()
-      
-      if (accessToken) {
-        try {
-          console.log('Fetching current user...')
-          const cognitoUser = await getCurrentUser()
-          console.log('Current user retrieved:', cognitoUser.username)
-          setToken(accessToken)
-          setUser({ 
-            email: cognitoUser.signInDetails?.loginId ?? cognitoUser.username ?? '',
-            name: cognitoUser.username 
-          })
-          setError(null)
-        } catch (userError) {
-          console.error('Error getting current user:', userError)
-          // Still set token even if user fetch fails
-          setToken(accessToken)
-          setUser(null)
-          setError(null)
-        }
-      } else {
-        console.log('No access token in session')
-        setUser(null)
-        setToken(null)
-      }
-    } catch (err) {
-      const errorMsg = err instanceof Error ? err.message : String(err)
-      console.error('Error loading session:', errorMsg)
-      setUser(null)
-      setToken(null)
-      setError(errorMsg)
-    } finally {
-      setIsLoading(false)
-    }
-  }
-
   const login = async () => {
-    try {
-      setError(null)
-      await signInWithRedirect()
-    } catch (err) {
-      const errorMsg = err instanceof Error ? err.message : String(err)
-      console.error('Sign in error:', errorMsg)
-      setError(errorMsg)
-    }
+    try { setError(null); await signInWithRedirect() }
+    catch (err) { setError(err instanceof Error ? err.message : 'Unable to sign in') }
   }
-  
   const logout = async () => {
     try {
       await signOut({ global: true })
       setUser(null)
       setToken(null)
       setError(null)
-    } catch (err) {
-      const errorMsg = err instanceof Error ? err.message : String(err)
-      console.error('Logout error:', errorMsg)
-      setError(errorMsg)
-    }
+    } catch (err) { setError(err instanceof Error ? err.message : 'Unable to sign out') }
   }
-
-  const isAuthenticated = user !== null && token !== null
-
   return (
-    <AuthContext.Provider value={{ user, token, isLoading, error, login, logout, isAuthenticated }}>
+    <AuthContext.Provider value={{ user, token, isLoading, error, login, logout, isAuthenticated: user !== null && token !== null }}>
       {children}
     </AuthContext.Provider>
   )
 }
-
-export const useAuthContext = () => useContext(AuthContext)

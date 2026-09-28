@@ -47,17 +47,19 @@ public sealed class ProductsController : ControllerBase
     }
 
     [HttpPost]
+    [Authorize(Policy = "InventoryWrite")]
     [ProducesResponseType(typeof(ProductDto), StatusCodes.Status201Created)]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
     public async Task<ActionResult<ProductDto>> CreateProduct(
         [FromBody] CreateProductCommand command,
         CancellationToken cancellationToken = default)
     {
-        var created = await _mediator.Send(command, cancellationToken);
+        var created = await _mediator.Send(command with { CreatedBy = User.FindFirst("sub")!.Value }, cancellationToken);
         return CreatedAtAction(nameof(GetProductById), new { id = created.Id }, created);
     }
 
     [HttpPost("{id:guid}/stock-adjustments")]
+    [Authorize(Policy = "InventoryWrite")]
     [ProducesResponseType(typeof(ProductDto), StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
@@ -67,7 +69,7 @@ public sealed class ProductsController : ControllerBase
         [FromBody] AdjustStockRequest request,
         CancellationToken cancellationToken = default)
     {
-        var command = new AdjustStockCommand(id, request.Delta, request.Reason, request.AdjustedBy);
+        var command = new AdjustStockCommand(id, request.Delta, request.Reason, User.FindFirst("sub")!.Value);
         var updated = await _mediator.Send(command, cancellationToken);
         return Ok(updated);
     }

@@ -1,7 +1,10 @@
-import { useAuthContext } from "../context/AuthContext";
+import { useContext } from 'react';
+import { AuthContext } from '../context/authContextValue';
 
 export function useAuth() {
-  const { user, token, isLoading, login, logout, isAuthenticated, error } = useAuthContext()
+  const context = useContext(AuthContext);
+  if (!context) throw new Error('useAuth requires AuthProvider');
+  const { user, isLoading, login, logout, isAuthenticated, error } = context;
 
   return {
     isAuthenticated,

@@ -6,3 +6,6 @@
 .env
 .env.local
 appsettings.Development.json
+.env.*
+**/appsettings.Development.json
+**/.secrets

@@ -1,0 +1,19 @@
+# Apply separately only when your k3d load balancer maps localhost:3000 to Traefik port 80.
+# Otherwise use the documented port-forward, preserving existing Cognito callbacks.
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: smartwms
+  namespace: smartwms
+spec:
+  ingressClassName: traefik
+  rules:
+    - host: localhost
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: frontend
+                port: {number: 8080}

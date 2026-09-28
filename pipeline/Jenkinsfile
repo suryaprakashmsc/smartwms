@@ -1,35 +1,49 @@
-﻿pipeline {
-  agent any
-
+pipeline {
+  agent { label 'smartwms-local' }
+  options {
+    skipDefaultCheckout(true)
+    disableConcurrentBuilds()
+    timeout(time: 60, unit: 'MINUTES')
+    buildDiscarder(logRotator(numToKeepStr: '10', artifactNumToKeepStr: '3'))
+  }
   stages {
     stage('Checkout') {
       steps {
+        deleteDir()
         checkout scm
+        script {
+          env.IMAGE_TAG = "${env.BUILD_NUMBER}-${env.GIT_COMMIT.take(12)}"
+        }
       }
     }
-
-    stage('Backend') {
-      steps {
-        echo 'Restore, build, and test .NET services here.'
+    stage('Tests and dependency audit') {
+      steps { sh 'bash pipeline/ci-test.sh' }
+      post {
+        always {
+          junit testResults: 'reports/frontend/*.xml', allowEmptyResults: true
+          archiveArtifacts artifacts: 'reports/**/*.trx', allowEmptyArchive: true
+        }
       }
     }
-
-    stage('Frontend') {
+    stage('Build and scan release images') {
+      steps { sh 'bash pipeline/build-images.sh' }
+    }
+    stage('Local release bundle') {
       steps {
-        echo 'Install, lint, and build the React app here.'
+        archiveArtifacts artifacts: 'release/*', fingerprint: true
+        echo "Local release ${env.IMAGE_TAG} verified. Download the release bundle for explicit k3d deployment. AWS publishing is disabled."
       }
     }
-
-    stage('Containerize') {
-      steps {
-        echo 'Build and tag Docker images for services and frontend.'
-      }
-    }
-
-    stage('Deploy') {
-      steps {
-        echo 'Deploy to k3d, ECS, or another target environment.'
-      }
+  }
+  post {
+    always {
+      archiveArtifacts artifacts: 'reports/**/*.json', allowEmptyArchive: true
+      sh '''
+        if [ -n "${IMAGE_TAG:-}" ]; then
+          docker image rm "smartwms-tests:$IMAGE_TAG" "smartwms-ui-tests:$IMAGE_TAG" \
+            "smartwms-inventory:$IMAGE_TAG" "smartwms-ui:$IMAGE_TAG" >/dev/null 2>&1 || true
+        fi
+      '''
     }
   }
 }

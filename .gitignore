@@ -16,5 +16,15 @@ pipeline/.env
 Documents/enterprise-project-plan.html
 Documents/Instruction-codex 
 /.dotnet
-/docs
 smartwms-ui.bat
+
+# Only sanitized examples may be tracked.
+!.env.example
+!**/.env.example
+**/.secrets/
+**/test-results/
+**/TestResults/
+release/
+reports/
+**/audit.json
+.codex-backups/

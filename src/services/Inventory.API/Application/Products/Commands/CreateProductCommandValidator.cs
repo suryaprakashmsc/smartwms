@@ -31,6 +31,9 @@ public sealed class CreateProductCommandValidator : AbstractValidator<CreateProd
 
         RuleFor(x => x.InitialQuantity)
             .GreaterThanOrEqualTo(0);
+        RuleFor(x => x.InitialQuantity)
+            .LessThanOrEqualTo(x => x.MaximumLevel!.Value)
+            .When(x => x.MaximumLevel.HasValue);
 
         RuleFor(x => x.Currency)
             .NotEmpty()

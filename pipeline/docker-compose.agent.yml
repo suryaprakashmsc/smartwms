@@ -1,0 +1,54 @@
+name: smartwms-ci
+services:
+  builder:
+    image: docker:29-dind@sha256:3f3c01aaaebf7cce837356b688b7c059a4749f10bd7660dec7c58fc454a283f0
+    privileged: true
+    restart: unless-stopped
+    environment:
+      DOCKER_TLS_CERTDIR: /certs
+    volumes:
+      - builder-data:/var/lib/docker
+      - builder-certs:/certs/client
+    networks:
+      build:
+        aliases: [docker]
+    healthcheck:
+      test: ["CMD", "docker", "info"]
+      interval: 5s
+      timeout: 5s
+      retries: 30
+    # No host socket or published port. This privileged daemon is for trusted LOCAL builds only.
+    mem_limit: 6g
+    cpus: 4
+  agent:
+    build: ./agent
+    image: smartwms-jenkins-agent:local
+    restart: unless-stopped
+    init: true
+    depends_on:
+      builder:
+        condition: service_healthy
+    environment:
+      DOCKER_HOST: tcp://docker:2376
+      DOCKER_TLS_VERIFY: '1'
+      DOCKER_CERT_PATH: /certs/client
+    volumes:
+      - agent-work:/home/jenkins/agent
+      - builder-certs:/certs/client:ro
+    secrets: [jenkins_agent_secret]
+    networks: [build, jenkins]
+    cap_drop: [ALL]
+    security_opt: [no-new-privileges:true]
+    mem_limit: 1g
+secrets:
+  jenkins_agent_secret:
+    file: ./.secrets/agent-secret
+networks:
+  build: {}
+  jenkins:
+    external: true
+    name: pipeline_default
+volumes:
+  builder-data: {}
+  builder-certs: {}
+  agent-work: {}

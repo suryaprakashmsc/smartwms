@@ -31,7 +31,8 @@ public sealed class ProductRepository : IProductRepository
         CancellationToken ct = default)
     {
         page = page < 1 ? 1 : page;
-        pageSize = pageSize < 1 ? 20 : pageSize;
+        pageSize = Math.Clamp(pageSize, 1, 100);
+        page = Math.Min(page, int.MaxValue / pageSize);
 
         IQueryable<Product> query = _ctx.Products.AsNoTracking();
 
@@ -62,6 +63,7 @@ public sealed class ProductRepository : IProductRepository
 
         var items = await query
             .OrderBy(p => p.Name)
+            .ThenBy(p => p.Id)
             .Skip((page - 1) * pageSize)
             .Take(pageSize)
             .ToListAsync(ct);

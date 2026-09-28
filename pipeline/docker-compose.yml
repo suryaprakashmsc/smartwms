@@ -9,7 +9,7 @@ services:
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
       POSTGRES_DB: inventory
     ports:
-      - "${POSTGRES_HOST_PORT:-5432}:5432"
+      - "127.0.0.1:${POSTGRES_HOST_PORT:-5432}:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
     healthcheck:
@@ -25,7 +25,7 @@ services:
       dockerfile: API/Dockerfile
     container_name: smartwms-inventory-api
     ports:
-      - "8081:8080"
+      - "127.0.0.1:8081:8080"
     environment:
       ASPNETCORE_ENVIRONMENT: Production
       ASPNETCORE_URLS: http://+:8080
@@ -40,7 +40,7 @@ services:
       postgres:
         condition: service_healthy
     healthcheck:
-      test: ["CMD-SHELL", "curl -f http://localhost:8080/api/health || exit 1"]
+      test: ["CMD", "dotnet", "Inventory.API.dll", "--healthcheck"]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -60,20 +60,19 @@ services:
         VITE_REDIRECT_SIGN_OUT: ${VITE_REDIRECT_SIGN_OUT:-http://localhost:3000/login}
     container_name: smartwms-frontend
     ports:
-      - "3000:80"
+      - "127.0.0.1:3000:8080"
     depends_on:
       inventory-api:
         condition: service_healthy
 
   jenkins:
-    image: jenkins/jenkins:lts
+    restart: unless-stopped
+    image: jenkins/jenkins:2.568.3-jdk21
     container_name: smartwms-jenkins
     ports:
-      - "8090:8080"
-      - "50000:50000"
+      - "127.0.0.1:8090:8080"
     volumes:
       - jenkins_data:/var/jenkins_home
-      - /var/run/docker.sock:/var/run/docker.sock
     environment:
       JAVA_OPTS: "-Djenkins.install.runSetupWizard=false"
 

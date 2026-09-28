@@ -9,6 +9,8 @@ public sealed class ProductConfiguration : IEntityTypeConfiguration<Product>
     public void Configure(EntityTypeBuilder<Product> builder)
     {
         builder.ToTable("products");
+        // PostgreSQL updates xmin for every row change, including owned values.
+        builder.Property<uint>("Version").HasColumnName("xmin").IsRowVersion();
 
         builder.HasKey(p => p.Id);
         builder.Property(p => p.Id).HasColumnName("id");
@@ -72,6 +74,7 @@ public sealed class ProductConfiguration : IEntityTypeConfiguration<Product>
 
         builder.OwnsOne(p => p.SKU, sku =>
         {
+            sku.Property<uint>("Version").HasColumnName("xmin").IsRowVersion();
             sku.Property(s => s.Value)
                 .HasColumnName("sku")
                 .HasMaxLength(20)
@@ -83,6 +86,7 @@ public sealed class ProductConfiguration : IEntityTypeConfiguration<Product>
 
         builder.OwnsOne(p => p.UnitPrice, price =>
         {
+            price.Property<uint>("Version").HasColumnName("xmin").IsRowVersion();
             price.Property(m => m.Amount)
                 .HasColumnName("unit_price")
                 .HasPrecision(18, 2)
@@ -96,6 +100,7 @@ public sealed class ProductConfiguration : IEntityTypeConfiguration<Product>
 
         builder.OwnsOne(p => p.Stock, stock =>
         {
+            stock.Property<uint>("Version").HasColumnName("xmin").IsRowVersion();
             stock.Property(s => s.Quantity)
                 .HasColumnName("stock_quantity")
                 .IsRequired();

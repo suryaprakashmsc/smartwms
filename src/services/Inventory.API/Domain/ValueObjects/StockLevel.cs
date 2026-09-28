@@ -60,7 +60,10 @@ public sealed class StockLevel : IEquatable<StockLevel>
     /// <summary>Returns new StockLevel after adding/removing units.</summary>
     public StockLevel Adjust(int delta)
     {
-        var newQty = Quantity + delta;
+        var candidate = (long)Quantity + delta;
+        if (candidate > int.MaxValue)
+            throw new InvalidOperationException("Adjustment exceeds the supported stock quantity.");
+        var newQty = (int)candidate;
 
         if (newQty < 0)
             throw new InvalidOperationException(

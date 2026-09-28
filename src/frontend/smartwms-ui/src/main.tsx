@@ -3,7 +3,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import React from "react";
 import ReactDOM from "react-dom/client";
 import { BrowserRouter } from "react-router-dom";
-import App from "./App.tsx";
+import App from "./App";
 import { AuthProvider } from "./context/AuthContext";
 import "./styles/app.css";
 
@@ -18,14 +18,17 @@ const redirectSignOut =
   `${defaultOrigin}/login`;
 
 // Configure Amplify with Cognito
-Amplify.configure({
+const userPoolId = import.meta.env.VITE_COGNITO_USER_POOL_ID;
+const userPoolClientId = import.meta.env.VITE_COGNITO_CLIENT_ID;
+const domain = import.meta.env.VITE_COGNITO_DOMAIN;
+if (userPoolId && userPoolClientId && domain) Amplify.configure({
   Auth: {
     Cognito: {
-      userPoolId:       import.meta.env.VITE_COGNITO_USER_POOL_ID,
-      userPoolClientId: import.meta.env.VITE_COGNITO_CLIENT_ID,
+      userPoolId,
+      userPoolClientId,
       loginWith: {
         oauth: {
-          domain:          import.meta.env.VITE_COGNITO_DOMAIN,
+          domain,
           scopes:          ['openid', 'email', 'profile'],
           redirectSignIn:  [redirectSignIn],
           redirectSignOut: [redirectSignOut],

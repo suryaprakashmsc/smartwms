@@ -1,8 +1,8 @@
-FROM node:20-alpine AS build
+FROM node:24-alpine@sha256:ebfe2f90462722a7a4de65e91990e97fe0d401c70e0e762c5b53302f905ec1c1 AS build
 WORKDIR /app
 
 COPY package.json pnpm-lock.yaml ./
-RUN npm install -g pnpm && pnpm install --frozen-lockfile
+RUN npm install -g pnpm@10.16.1 && pnpm install --frozen-lockfile
 
 COPY . .
 
@@ -28,8 +28,12 @@ ENV VITE_COGNITO_POST_LOGOUT_REDIRECT_URI=$VITE_COGNITO_POST_LOGOUT_REDIRECT_URI
 
 RUN pnpm build
 
-FROM nginx:alpine AS runtime
+FROM nginxinc/nginx-unprivileged:stable-alpine@sha256:4714e0b1b2577eaa1a6131d07c958b67f0eb68e6d0521e90c6e5287db8cf0bc5 AS runtime
+USER root
+# CVE-2026-93990: this pinned base still contains libexpat 2.8.4-r0.
+RUN apk add --no-cache --upgrade libexpat=2.8.5-r0
 COPY --from=build /app/dist /usr/share/nginx/html
 COPY nginx.conf /etc/nginx/conf.d/default.conf
-EXPOSE 80
+USER 101
+EXPOSE 8080
 CMD ["nginx", "-g", "daemon off;"]

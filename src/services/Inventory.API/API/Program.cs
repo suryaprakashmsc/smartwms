@@ -1,93 +1,63 @@
-﻿using Inventory.API.Middleware;
+using Inventory.API.Health;
+using Inventory.API.Middleware;
+using Inventory.API.Security;
 using Inventory.Application;
 using Inventory.Infrastructure;
 using Inventory.Infrastructure.Persistence;
-using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.AspNetCore.Diagnostics.HealthChecks;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.IdentityModel.Tokens;
+
+// Compose needs an executable probe because the runtime has no shell or curl.
+// Kubernetes continues to use its native HTTP probes.
+if (args.Length == 1 && args[0] == "--healthcheck")
+{
+    using var handler = new HttpClientHandler { UseProxy = false, AllowAutoRedirect = false };
+    using var client = new HttpClient(handler) { Timeout = TimeSpan.FromSeconds(3) };
+    Environment.ExitCode = await ContainerReadinessProbe.RunAsync(client);
+    return;
+}
 
 var builder = WebApplication.CreateBuilder(args);
-
 builder.Services.AddControllers();
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddProblemDetails();
 builder.Services.AddSwaggerGen();
-builder.Services.AddCors(options =>
-{
-    options.AddPolicy(
-        "FrontendDev",
-        policy => policy
-            .WithOrigins("http://localhost:5173")
-            .AllowAnyHeader()
-            .AllowAnyMethod());
-});
 builder.Services.AddInventoryApplication();
 builder.Services.AddInventoryInfrastructure(builder.Configuration);
-
-var cognitoAuthority = builder.Configuration["Cognito:Authority"];
-var cognitoClientId = builder.Configuration["Cognito:ClientId"];
-
-builder.Services
-    .AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
-    .AddJwtBearer(options =>
-    {
-        options.Authority = cognitoAuthority;
-        options.Audience = cognitoClientId;
-        // The Authority URL is the issuer for Cognito tokens
-        // For accessToken from Cognito OAuth flow, audience validation should be disabled
-        // because accessToken uses OAuth scopes, not audience claim (only idToken has aud)
-        options.TokenValidationParameters = new TokenValidationParameters
-        {
-            ValidateIssuerSigningKey = true,
-            ValidateIssuer = true,
-            ValidIssuer = cognitoAuthority,  // Explicitly set the valid issuer
-            ValidateAudience = false,  // accessToken doesn't have aud claim
-            ValidateLifetime = true,
-            ClockSkew = TimeSpan.FromSeconds(30)
-        };
-    });
-
-builder.Services.AddAuthorization();
-
+builder.Services.AddCognitoAuthentication(builder.Configuration);
+builder.Services.AddHealthChecks().AddCheck<DatabaseReadiness>("database", tags: new[] { "ready" });
+if (builder.Environment.IsDevelopment())
+    builder.Services.AddCors(options => options.AddPolicy("FrontendDev", policy =>
+        policy.WithOrigins("http://localhost:5173").AllowAnyHeader().AllowAnyMethod()));
 var app = builder.Build();
 
+// Explicit one-shot operation, run once before starting API replicas.
+if (args.Contains("--migrate"))
+{
+    using var scope = app.Services.CreateScope();
+    var database = scope.ServiceProvider.GetRequiredService<InventoryDbContext>();
+    if (args.Contains("--seed-demo") && !app.Environment.IsEnvironment("Local"))
+        throw new InvalidOperationException("Demo seeding is permitted only in the Local environment.");
+    await database.Database.MigrateAsync();
+    if (args.Contains("--seed-demo"))
+        await InventoryDbSeeder.SeedAsync(database, scope.ServiceProvider.GetRequiredService<ILogger<Program>>());
+    return;
+}
+if (args.Contains("--seed-demo"))
+    throw new InvalidOperationException("Demo seeding requires the one-shot --migrate operation.");
+app.UseExceptionHandler();
+app.UseMiddleware<ApiExceptionMiddleware>();
 if (app.Environment.IsDevelopment())
 {
     app.UseSwagger();
     app.UseSwaggerUI();
+    app.UseCors("FrontendDev");
 }
-
-app.UseMiddleware<ApiExceptionMiddleware>();
-app.UseCors("FrontendDev");
 app.UseAuthentication();
 app.UseAuthorization();
 app.MapControllers();
-app.MapGet("/", () => Results.Ok(new
-{
-    service = "inventory-api",
-    status = "running",
-    architecture = "clean-architecture-starter"
-}));
-
-//using (var scope = app.Services.CreateScope())
-//{
-//    var ctx = scope.ServiceProvider.GetRequiredService<InventoryDbContext>();
-//    var logger = scope.ServiceProvider.GetRequiredService<ILogger<Program>>();
-
-//    await ctx.Database.MigrateAsync();
-//    await InventoryDbSeeder.SeedAsync(ctx, logger);
-//}
-
-// Auto-migrate and seed on startup
-using (var scope = app.Services.CreateScope())
-{
-    var ctx = scope.ServiceProvider
-        .GetRequiredService<InventoryDbContext>();
-    var logger = scope.ServiceProvider
-        .GetRequiredService<ILogger<Program>>();
-
-    await ctx.Database.MigrateAsync(); // runs any pending migrations
-    await InventoryDbSeeder.SeedAsync(ctx, logger);
-}
-
+app.MapHealthChecks("/api/health/live", new HealthCheckOptions { Predicate = _ => false }).AllowAnonymous();
+app.MapHealthChecks("/api/health/ready", new HealthCheckOptions { Predicate = check => check.Tags.Contains("ready") }).AllowAnonymous();
+app.MapGet("/", () => Results.Ok(new { service = "inventory-api" }));
 app.Run();
+public partial class Program { }

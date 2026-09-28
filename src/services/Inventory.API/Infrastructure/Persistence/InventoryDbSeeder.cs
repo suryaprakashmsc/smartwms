@@ -46,9 +46,9 @@ public static class InventoryDbSeeder
 
         var stockMap = new Dictionary<string, int>
         {
-            ["ELEC-001"] = 12,
+            ["ELEC-001"] = 10,
             ["ELEC-002"] = 8,
-            ["ELEC-003"] = 18,
+            ["ELEC-003"] = 15,
             ["ELEC-004"] = 45,
             ["ELEC-005"] = 22,
             ["PKG-001"] = 3,

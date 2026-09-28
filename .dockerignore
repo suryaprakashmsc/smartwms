@@ -1,0 +1,11 @@
+.git
+**/node_modules
+**/bin
+**/obj
+**/dist
+**/test-results
+**/.env
+**/.env.*
+**/.secrets
+**/audit.json
+Documents

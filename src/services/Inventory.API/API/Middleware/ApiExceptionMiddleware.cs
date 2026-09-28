@@ -1,5 +1,7 @@
 using FluentValidation;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
+using Npgsql;
 
 namespace Inventory.API.Middleware;
 
@@ -25,6 +27,18 @@ public sealed class ApiExceptionMiddleware
         catch (KeyNotFoundException ex)
         {
             await WriteProblemAsync(context, StatusCodes.Status404NotFound, "Resource not found", ex.Message);
+        }
+        catch (DbUpdateConcurrencyException)
+        {
+            await WriteProblemAsync(context, StatusCodes.Status409Conflict, "Concurrent update", "The product changed. Reload it before retrying the adjustment.");
+        }
+        catch (DbUpdateException ex) when (ex.InnerException is PostgresException { SqlState: PostgresErrorCodes.UniqueViolation })
+        {
+            await WriteProblemAsync(context, StatusCodes.Status409Conflict, "Duplicate product", "A product with this SKU already exists.");
+        }
+        catch (ArgumentException)
+        {
+            await WriteProblemAsync(context, StatusCodes.Status400BadRequest, "Invalid request", "A supplied value violates the product rules.");
         }
         catch (InvalidOperationException ex)
         {

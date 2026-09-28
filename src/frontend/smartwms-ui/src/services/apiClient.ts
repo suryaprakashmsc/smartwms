@@ -65,26 +65,19 @@ export async function fetchJson<T>(path: string, init: RequestInit = {}): Promis
   try {
     const session = await fetchAuthSession()
     const accessToken = session.tokens?.accessToken?.toString()
-    console.log('API Request:', { path, hasToken: !!accessToken, tokenLength: accessToken?.length })
     if (accessToken && !headers.has("Authorization")) {
       headers.set("Authorization", `Bearer ${accessToken}`)
-      console.log('Authorization header set with accessToken')
-    } else if (!accessToken) {
-      console.warn('No access token found in session for API request')
     }
-  } catch (err) {
+  } catch {
     // not logged in — request proceeds without token
     // protected endpoints will return 401
-    console.error('Error fetching auth session:', err)
   }
 
-  console.log('Sending request to:', `${apiBaseUrl}${path}`)
   const response = await fetch(`${apiBaseUrl}${path}`, {
     ...init,
     headers
   });
 
-  console.log('Response received:', { status: response.status, statusText: response.statusText })
 
   if (!response.ok) {
     const fallbackMessage = `Request failed with status ${response.status}`;
@@ -92,7 +85,7 @@ export async function fetchJson<T>(path: string, init: RequestInit = {}): Promis
     try {
       const contentType = response.headers.get("content-type") ?? "";
 
-      if (contentType.includes("application/json")) {
+      if (contentType.includes("application/json") || contentType.includes("application/problem+json")) {
         const payload = (await response.json()) as unknown;
         throw new Error(getErrorMessage(payload, fallbackMessage));
       }

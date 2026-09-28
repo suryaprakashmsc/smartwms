@@ -97,7 +97,7 @@ public class Product
         // Build value objects — their own constructors enforce their rules
         var sku = SKU.Of(skuValue);
         var price = Money.Of(unitPrice, currency);
-        var stock = StockLevel.Empty(reorderLevel);
+        var stock = StockLevel.Of(0, reorderLevel, maximumLevel);
 
         var product = new Product
         {

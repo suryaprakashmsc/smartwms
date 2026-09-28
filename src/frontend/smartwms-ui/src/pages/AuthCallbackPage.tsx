@@ -14,7 +14,6 @@ export default function AuthCallbackPage() {
 
     // If there's an explicit error, show it immediately
     if (auth.error && !auth.isLoading) {
-      setHasError(true)
       return
     }
 
